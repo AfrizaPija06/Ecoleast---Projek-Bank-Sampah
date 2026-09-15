@@ -1,6 +1,6 @@
 {
-  "name": "ECOLEAST - Dashboard Bank Sampah",
-  "description": "Dashboard rekam jejak bank sampah UCIDA LESTARI untuk memantau setoran sampah, tabungan saldo, dan kontribusi lingkungan nasabah.",
+  "name": "ECO LEAST - Sistem Informasi Bank Sampah Desa Cicadas",
+  "description": "Sistem Informasi Bank Sampah Terpadu 3 Tingkat: Forum Desa, Bank Unit RW/RT, dan Nasabah Warga.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
