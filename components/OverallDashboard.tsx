@@ -31,6 +31,8 @@ import {
   Clock,
   Building2,
   ExternalLink,
+  Package,
+  Recycle,
 } from 'lucide-react';
 import { BankUnit } from '@/lib/schema/types';
 import { getStoredBankUnits, getDesaAggregatedStats } from '@/lib/dbStore';
@@ -213,6 +215,112 @@ export function OverallDashboard({
     });
   }, [breakdownImpact.categoryBreakdown]);
 
+  // Dedicated calculations for Komoditas Unggulan: Plastik PET (Polyethylene Terephthalate)
+  const petStats = React.useMemo(() => {
+    let totalKg = 0;
+    let totalNilai = 0;
+    let transactionCount = 0;
+    const unitMap: Record<string, { unitId: string; unitName: string; rw: string; kg: number; nilai: number; txCount: number }> = {};
+
+    // Initialize all active units
+    allActiveUnits.forEach((u) => {
+      unitMap[u.id] = {
+        unitId: u.id,
+        unitName: u.nama,
+        rw: u.rw,
+        kg: 0,
+        nilai: 0,
+        txCount: 0,
+      };
+    });
+
+    // 1. Calculate across breakdownRecords for active view filter
+    breakdownRecords.forEach((rec) => {
+      let recHasPet = false;
+      let recPetKg = 0;
+      let recPetNilai = 0;
+
+      rec.items.forEach((item) => {
+        const nameLower = (item.jenisDetail || '').toLowerCase();
+        const isPet =
+          nameLower.includes('pet') ||
+          (item.kategoriId === 'plastik' && (nameLower.includes('botol') || nameLower.includes('gelas') || nameLower.includes('pet')));
+
+        if (isPet) {
+          recHasPet = true;
+          const berat = item.berat || 0;
+          const nilai = item.subtotal || Math.round(berat * 4000);
+          recPetKg += berat;
+          recPetNilai += nilai;
+        }
+      });
+
+      if (recHasPet) {
+        transactionCount++;
+        totalKg += recPetKg;
+        totalNilai += recPetNilai;
+      }
+    });
+
+    // 2. Village-wide per-unit ranking from filteredRecords
+    filteredRecords.forEach((rec) => {
+      const uId = rec.unitId || 'UNIT-CCD-001';
+      if (!unitMap[uId]) {
+        const uObj = allActiveUnits.find((u) => u.id === uId);
+        unitMap[uId] = {
+          unitId: uId,
+          unitName: rec.unitNama || uObj?.nama || 'Bank Sampah Unit',
+          rw: uObj?.rw || 'RW',
+          kg: 0,
+          nilai: 0,
+          txCount: 0,
+        };
+      }
+
+      let recHasPet = false;
+      rec.items.forEach((item) => {
+        const nameLower = (item.jenisDetail || '').toLowerCase();
+        const isPet =
+          nameLower.includes('pet') ||
+          (item.kategoriId === 'plastik' && (nameLower.includes('botol') || nameLower.includes('gelas') || nameLower.includes('pet')));
+
+        if (isPet) {
+          recHasPet = true;
+          const berat = item.berat || 0;
+          const nilai = item.subtotal || Math.round(berat * 4000);
+          unitMap[uId].kg += berat;
+          unitMap[uId].nilai += nilai;
+        }
+      });
+
+      if (recHasPet) {
+        unitMap[uId].txCount++;
+      }
+    });
+
+    const totalPlastikKg = breakdownImpact.categoryBreakdown['plastik']?.berat || 0;
+    const petShareOfPlastik = totalPlastikKg > 0 ? (totalKg / totalPlastikKg) * 100 : 0;
+    const petShareOfTotal = breakdownImpact.totalKg > 0 ? (totalKg / breakdownImpact.totalKg) * 100 : 0;
+    const estimatedBottles = Math.round(totalKg * 45); // Estimasi ~45 botol 600ml per kg
+    const co2SavedKg = Number((totalKg * 2.1).toFixed(1)); // ~2.1 kg CO2e per kg botol PET
+    const energySavedKwh = Number((totalKg * 1.8).toFixed(1)); // ~1.8 kWh energi per kg PET
+
+    const unitRanking = Object.values(unitMap).sort((a, b) => b.kg - a.kg);
+
+    return {
+      totalKg: Number(totalKg.toFixed(1)),
+      totalNilai,
+      transactionCount,
+      estimatedBottles,
+      co2SavedKg,
+      energySavedKwh,
+      petShareOfPlastik: Math.min(100, petShareOfPlastik),
+      petShareOfTotal: Math.min(100, petShareOfTotal),
+      unitRanking,
+      topUnit: unitRanking[0] || null,
+    };
+  }, [breakdownRecords, filteredRecords, allActiveUnits, breakdownImpact]);
+
   // Unit performance comparison list for forum desa view
   const unitComparisons = React.useMemo(() => {
     if (!isForumView) return [];
@@ -330,8 +438,8 @@ export function OverallDashboard({
         </div>
       </div>
 
-      {/* 2. Top Primary Executive Metric Cards (4 Kolom Agregat) */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isForumView ? 'lg:grid-cols-3 xl:grid-cols-5' : 'lg:grid-cols-4'} gap-4 sm:gap-5`}>
+      {/* 2. Top Primary Executive Metric Cards */}
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isForumView ? 'lg:grid-cols-3 xl:grid-cols-6' : 'lg:grid-cols-3 xl:grid-cols-5'} gap-4 sm:gap-5`}>
         {/* Card 1: Total Sampah Terkumpul */}
         <div
           id="kpi-total-sampah"
@@ -354,7 +462,34 @@ export function OverallDashboard({
           </div>
         </div>
 
-        {/* Card 2: Total Tabungan Terkelola Warga */}
+        {/* Card 2: Komoditas Unggulan PET */}
+        <div
+          id="kpi-unggulan-pet"
+          className="bg-gradient-to-br from-emerald-50/70 via-white to-sky-50/50 rounded-2xl p-5 border border-emerald-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-emerald-900">Unggulan: Plastik PET</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-emerald-600 text-white">
+                ⭐ TOP
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 stroke-[2.2]" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-black text-emerald-950 tracking-tight">
+              {petStats.totalKg.toLocaleString('id-ID')} <span className="text-base font-bold text-emerald-700">kg</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-emerald-800 font-semibold">
+              <span>~{petStats.estimatedBottles.toLocaleString('id-ID')} butir botol</span>
+              <span className="text-[10px] text-emerald-600 font-medium">({petStats.petShareOfPlastik.toFixed(0)}% plastik)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Total Tabungan Terkelola Warga */}
         <div
           id="kpi-total-tabungan"
           className="bg-white rounded-2xl p-5 border border-gray-100 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between"
@@ -375,7 +510,7 @@ export function OverallDashboard({
           </div>
         </div>
 
-        {/* Card 3: Total Nasabah Terdaftar */}
+        {/* Card 4: Total Nasabah Terdaftar */}
         <div
           id="kpi-total-nasabah"
           onClick={() => !isForumView && onNavigateToTab('nasabah')}
@@ -399,7 +534,7 @@ export function OverallDashboard({
           </div>
         </div>
 
-        {/* Card 4: Reduksi CO2e Kumulatif */}
+        {/* Card 5: Reduksi CO2e Kumulatif */}
         <div
           id="kpi-total-co2"
           className="bg-white rounded-2xl p-5 border border-gray-100 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between"
@@ -416,12 +551,12 @@ export function OverallDashboard({
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-[#005596] font-semibold">
               <Trees className="w-3.5 h-3.5" />
-              <span>Setara {overallImpact.treesSaved} pohon terselamatkan</span>
+              <span>Setara {overallImpact.treesSaved} pohon</span>
             </div>
           </div>
         </div>
 
-        {/* Card 5: Total Unit Bank Sampah (Only on Forum View) */}
+        {/* Card 6: Total Unit Bank Sampah (Only on Forum View) */}
         {isForumView && (
           <div
             id="kpi-total-unit"
@@ -439,11 +574,204 @@ export function OverallDashboard({
                 <span className="text-base font-bold text-gray-500">Unit</span>
               </div>
               <div className="mt-2 flex items-center text-xs text-[#005596] font-semibold">
-                <span>Terdaftar & Aktif di Desa Cicadas</span>
+                <span>Aktif di Desa Cicadas</span>
               </div>
             </div>
           </div>
         )}
+      </div>
+
+      {/* 2.5 SECTION KHUSUS: SOROTAN KOMODITAS UNGGULAN PLASTIK PET */}
+      <div
+        id="section-unggulan-pet"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-[#004071] to-[#005596] text-white p-6 sm:p-7 shadow-sm border border-sky-400/30"
+      >
+        {/* Ambient Decorative Recycled Symbol */}
+        <div className="absolute -right-6 -bottom-6 w-56 h-56 opacity-10 pointer-events-none text-emerald-300">
+          <Recycle className="w-full h-full" />
+        </div>
+
+        <div className="relative z-10 space-y-6">
+          {/* Header Row */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/15">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-300 text-xs font-bold border border-emerald-400/30">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                <span>KOMODITAS UNGGULAN BANK SAMPAH DESA CICADAS</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+                <span>Plastik PET (Polyethylene Terephthalate)</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-emerald-500 text-white font-extrabold tracking-wide">
+                  Grade A Daur Ulang
+                </span>
+              </h2>
+              <p className="text-xs text-sky-100/90 max-w-3xl leading-relaxed">
+                Botol plastik PET bening dan kemasan air mineral merupakan komoditas unggulan prioritas Bank Sampah se-Desa Cicadas dengan daya serap pasar industri daur ulang 100%, perputaran nilai tabungan warga tertinggi, dan kontribusi reduksi karbon nyata.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="bg-black/30 backdrop-blur-xs border border-white/15 px-4 py-2.5 rounded-2xl text-right">
+                <span className="text-[10px] text-sky-200 block uppercase font-bold tracking-wider">
+                  Harga Acuan Pasar
+                </span>
+                <span className="text-base font-black text-emerald-300">
+                  Rp 4.000 - 4.500 <span className="text-xs text-white/80 font-normal">/ kg</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Key Highlight Metric Tiles */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="bg-white/10 backdrop-blur-xs border border-white/15 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-sky-200">Total PET Terkumpul</span>
+                <Package className="w-4 h-4 text-emerald-300" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {petStats.totalKg.toLocaleString('id-ID')} <span className="text-sm font-bold text-emerald-300">kg</span>
+                </div>
+                <div className="mt-1 text-[11px] text-sky-200">
+                  {petStats.petShareOfPlastik.toFixed(1)}% dari seluruh plastik
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-xs border border-white/15 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-sky-200">Estimasi Botol PET</span>
+                <Recycle className="w-4 h-4 text-emerald-300" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-300 tracking-tight">
+                  ~{petStats.estimatedBottles.toLocaleString('id-ID')}
+                </div>
+                <div className="mt-1 text-[11px] text-sky-200">
+                  Botol dicegah mencemari kali & TPA
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-xs border border-white/15 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-sky-200">Perputaran Nilai Ekonomi</span>
+                <Wallet className="w-4 h-4 text-emerald-300" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {formatRupiah(petStats.totalNilai)}
+                </div>
+                <div className="mt-1 text-[11px] text-sky-200">
+                  Dari {petStats.transactionCount} setoran warga
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-xs border border-white/15 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-sky-200">Reduksi Jejak Karbon</span>
+                <Leaf className="w-4 h-4 text-emerald-300" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {petStats.co2SavedKg.toLocaleString('id-ID')} <span className="text-sm font-bold text-emerald-300">kg CO₂e</span>
+                </div>
+                <div className="mt-1 text-[11px] text-sky-200">
+                  Hemat ~{petStats.energySavedKwh} kWh energi industri
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-grid: Ranking Unit Pengumpul PET & Panduan Kualitas PET */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
+            {/* Left: Ranking Unit Pengumpul PET (7 cols) */}
+            <div className="lg:col-span-7 bg-black/25 backdrop-blur-xs border border-white/15 rounded-2xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-300" />
+                  <span>Kontribusi Pengumpulan PET Antar Bank Sampah Unit</span>
+                </h3>
+                <span className="text-[11px] text-emerald-300 font-semibold">
+                  {isForumView ? 'Agregasi Se-Desa' : 'Unit Terdata'}
+                </span>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {petStats.unitRanking.map((item, idx) => {
+                  const percentOfPet =
+                    petStats.totalKg > 0 ? (item.kg / petStats.totalKg) * 100 : 0;
+                  return (
+                    <div
+                      key={item.unitId}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/10 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${
+                          idx === 0 ? 'bg-amber-400 text-slate-900' : idx === 1 ? 'bg-slate-300 text-slate-900' : 'bg-white/20 text-white'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <span className="font-bold text-white truncate block">
+                            {item.unitName}
+                          </span>
+                          <span className="text-[10px] text-sky-200">
+                            {item.rw} • {item.txCount} transaksi • {formatRupiah(item.nilai)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="font-black text-emerald-300 block">
+                          {item.kg.toFixed(1)} kg
+                        </span>
+                        <span className="text-[10px] text-sky-200 font-medium">
+                          ~{Math.round(item.kg * 45)} botol ({percentOfPet.toFixed(0)}%)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right: Panduan Standar Mutu PET Bersih (5 cols) */}
+            <div className="lg:col-span-5 bg-black/25 backdrop-blur-xs border border-white/15 rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                  <span>Kriteria Kualitas Unggulan PET</span>
+                </h3>
+                <p className="text-[11px] text-sky-200 mt-1 leading-relaxed">
+                  Untuk nilai jual optimal di pabrik rPET, seluruh unit dan warga menerapkan standar:
+                </p>
+
+                <ul className="mt-3 space-y-2 text-[11px] text-white/90">
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
+                    <span><strong>Bilas & Keringkan:</strong> Botol bersih dari sisa cairan manis/minyak.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
+                    <span><strong>Pisahkan Tutup & Label:</strong> Tutup botol (HDPE) dan label dipisahkan.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
+                    <span><strong>Pipihkan Botol:</strong> Remas/injak untuk efisiensi ruang gudang unit.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-sky-200">
+                <span>Mitra Daur Ulang: Industri rPET & Tekstil</span>
+                <span className="font-bold text-emerald-300">100% Sirkular</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 3. Baris Dua Kolom: Distribusi Sampah & Dampak Lingkungan Kumulatif (Tersedia untuk Bank Unit & Forum Desa) */}
@@ -578,16 +906,32 @@ export function OverallDashboard({
               {categoryStats.map((cat) => (
                 <div
                   key={cat.id}
-                  className="p-3 rounded-xl border border-gray-100 hover:border-sky-200 transition-colors bg-gray-50/50 flex items-center justify-between"
+                  className={`p-3 rounded-xl border transition-colors flex items-center justify-between ${
+                    cat.id === 'plastik'
+                      ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-300'
+                      : 'border-gray-100 hover:border-sky-200 bg-gray-50/50'
+                  }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className={`w-3 h-3 rounded-full ${cat.colorBar} shrink-0`} />
                     <div className="min-w-0">
-                      <span className="text-xs font-bold text-gray-900 truncate block">
-                        {cat.nama}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-gray-900 truncate block">
+                          {cat.nama}
+                        </span>
+                        {cat.id === 'plastik' && (
+                          <span className="px-1.5 py-0.2 rounded-sm bg-emerald-600 text-white text-[9px] font-extrabold shrink-0">
+                            ⭐ Unggulan PET
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[11px] text-gray-500">
                         {formatRupiah(cat.nilai)}
+                        {cat.id === 'plastik' && petStats.totalKg > 0 && (
+                          <span className="text-emerald-700 font-semibold ml-1">
+                            • PET: {petStats.totalKg} kg ({petStats.petShareOfPlastik.toFixed(0)}%)
+                          </span>
+                        )}
                       </span>
                     </div>
                   </div>

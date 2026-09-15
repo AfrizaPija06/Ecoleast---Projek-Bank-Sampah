@@ -42,28 +42,23 @@ export function RegisterNasabahModal({
   adminSession,
   existingNasabahList,
 }: RegisterNasabahModalProps) {
-  const [bankUnits, setBankUnits] = useState<BankUnit[]>([]);
-
-  useEffect(() => {
-    setBankUnits(getStoredBankUnits());
-  }, [isOpen]);
+  const [bankUnits, setBankUnits] = useState<BankUnit[]>(() => {
+    if (typeof window !== 'undefined') {
+      return getStoredBankUnits();
+    }
+    return [];
+  });
 
   const isForumAdmin = adminSession?.role === 'superadmin_forum';
 
   // Selected Bank Unit state
-  const defaultUnitId = adminSession?.unitId || (bankUnits[0]?.id || 'UNIT-CCD-001');
-  const [selectedUnitId, setSelectedUnitId] = useState<string>(defaultUnitId);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(() => {
+    return adminSession?.unitId || 'UNIT-CCD-001';
+  });
 
-  useEffect(() => {
-    if (adminSession?.unitId) {
-      setSelectedUnitId(adminSession.unitId);
-    } else if (bankUnits.length > 0 && !selectedUnitId) {
-      setSelectedUnitId(bankUnits[0].id);
-    }
-  }, [adminSession, bankUnits]);
-
-  const activeUnit = bankUnits.find((u) => u.id === selectedUnitId) || bankUnits[0] || {
-    id: 'UNIT-CCD-001',
+  const fallbackUnit = bankUnits.find((u) => u.id === adminSession?.unitId) || bankUnits[0];
+  const activeUnit = bankUnits.find((u) => u.id === selectedUnitId) || fallbackUnit || {
+    id: adminSession?.unitId || 'UNIT-CCD-001',
     nama: 'Bank Sampah Mekar Jaya RW 01',
     rw: 'RW 01',
   };
@@ -76,24 +71,25 @@ export function RegisterNasabahModal({
   const [nik, setNik] = useState('');
   const [noTelepon, setNoTelepon] = useState('');
   const [rt, setRt] = useState('RT 01');
-  const [rw, setRw] = useState(activeUnit.rw || 'RW 01');
+  const [rw, setRw] = useState(() => activeUnit.rw || 'RW 01');
   const [alamat, setAlamat] = useState('');
   const [targetBulananKg, setTargetBulananKg] = useState('20');
   const [pin, setPin] = useState('123456');
   const [errorMsg, setErrorMsg] = useState('');
   const [isCopied, setIsCopied] = useState(false);
 
-  // Sync RW when activeUnit changes
-  useEffect(() => {
-    if (activeUnit?.rw) {
-      setRw(activeUnit.rw);
-    }
-  }, [selectedUnitId]);
-
   // Success state
   const [createdNasabah, setCreatedNasabah] = useState<Nasabah | null>(null);
 
   if (!isOpen) return null;
+
+  const handleUnitChange = (newUnitId: string) => {
+    setSelectedUnitId(newUnitId);
+    const u = bankUnits.find((unit) => unit.id === newUnitId);
+    if (u?.rw) {
+      setRw(u.rw);
+    }
+  };
 
   const handleResetForm = () => {
     setIdNasabah(generateNewNasabahId());
@@ -270,7 +266,7 @@ export function RegisterNasabahModal({
                   <select
                     id="select-unit-nasabah-registration"
                     value={selectedUnitId}
-                    onChange={(e) => setSelectedUnitId(e.target.value)}
+                    onChange={(e) => handleUnitChange(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-sky-300 rounded-lg text-xs font-semibold text-[#003B6D] focus:outline-none focus:ring-2 focus:ring-[#005596]/30 cursor-pointer"
                   >
                     {bankUnits.map((u) => (

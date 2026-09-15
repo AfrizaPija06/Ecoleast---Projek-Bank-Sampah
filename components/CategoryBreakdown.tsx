@@ -124,8 +124,13 @@ export const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({
                 )}
               </div>
 
-              <div className="font-semibold text-xs text-gray-800 line-clamp-1">
-                {item.kategori.nama}
+              <div className="font-semibold text-xs text-gray-800 line-clamp-1 flex items-center gap-1">
+                <span>{item.kategori.nama}</span>
+                {item.kategori.id === 'plastik' && (
+                  <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded-xs shrink-0">
+                    ⭐ PET
+                  </span>
+                )}
               </div>
 
               <div className="mt-1 flex items-baseline gap-1">
