@@ -215,7 +215,7 @@ export function OverallDashboard({
     });
   }, [breakdownImpact.categoryBreakdown]);
 
-  // Dedicated calculations for Komoditas Unggulan: Plastik PET (Polyethylene Terephthalate)
+  // Dedicated calculations for Plastik PET (Polyethylene Terephthalate)
   const petStats = React.useMemo(() => {
     let totalKg = 0;
     let totalNilai = 0;
@@ -462,16 +462,16 @@ export function OverallDashboard({
           </div>
         </div>
 
-        {/* Card 2: Komoditas Unggulan PET */}
+        {/* Card 2: Plastik PET */}
         <div
-          id="kpi-unggulan-pet"
+          id="kpi-pet"
           className="bg-gradient-to-br from-emerald-50/70 via-white to-sky-50/50 rounded-2xl p-5 border border-emerald-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between relative overflow-hidden"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-emerald-900">Unggulan: Plastik PET</span>
+              <span className="text-xs font-bold text-emerald-900">Plastik PET</span>
               <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-emerald-600 text-white">
-                ⭐ TOP
+                PET
               </span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
@@ -581,9 +581,9 @@ export function OverallDashboard({
         )}
       </div>
 
-      {/* 2.5 SECTION KHUSUS: SOROTAN KOMODITAS UNGGULAN PLASTIK PET */}
+      {/* 2.5 SECTION KHUSUS: SOROTAN PLASTIK PET */}
       <div
-        id="section-unggulan-pet"
+        id="section-pet"
         className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-[#004071] to-[#005596] text-white p-6 sm:p-7 shadow-sm border border-sky-400/30"
       >
         {/* Ambient Decorative Recycled Symbol */}
@@ -597,7 +597,7 @@ export function OverallDashboard({
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-300 text-xs font-bold border border-emerald-400/30">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-                <span>KOMODITAS UNGGULAN BANK SAMPAH DESA CICADAS</span>
+                <span>KOMODITAS BANK SAMPAH DESA CICADAS</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
                 <span>Plastik PET (Polyethylene Terephthalate)</span>
@@ -606,7 +606,7 @@ export function OverallDashboard({
                 </span>
               </h2>
               <p className="text-xs text-sky-100/90 max-w-3xl leading-relaxed">
-                Botol plastik PET bening dan kemasan air mineral merupakan komoditas unggulan prioritas Bank Sampah se-Desa Cicadas dengan daya serap pasar industri daur ulang 100%, perputaran nilai tabungan warga tertinggi, dan kontribusi reduksi karbon nyata.
+                Botol plastik PET bening dan kemasan air mineral merupakan komoditas prioritas Bank Sampah se-Desa Cicadas dengan daya serap pasar industri daur ulang 100%, perputaran nilai tabungan warga tertinggi, dan kontribusi reduksi karbon nyata.
               </p>
             </div>
 
@@ -743,7 +743,7 @@ export function OverallDashboard({
               <div>
                 <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                  <span>Kriteria Kualitas Unggulan PET</span>
+                  <span>Kriteria Kualitas Plastik PET</span>
                 </h3>
                 <p className="text-[11px] text-sky-200 mt-1 leading-relaxed">
                   Untuk nilai jual optimal di pabrik rPET, seluruh unit dan warga menerapkan standar:
@@ -921,7 +921,7 @@ export function OverallDashboard({
                         </span>
                         {cat.id === 'plastik' && (
                           <span className="px-1.5 py-0.2 rounded-sm bg-emerald-600 text-white text-[9px] font-extrabold shrink-0">
-                            ⭐ Unggulan PET
+                            PET Bening
                           </span>
                         )}
                       </div>
