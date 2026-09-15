@@ -1,0 +1,8 @@
+{
+  "name": "ECOLEAST - Dashboard Bank Sampah",
+  "description": "Dashboard rekam jejak bank sampah UCIDA LESTARI untuk memantau setoran sampah, tabungan saldo, dan kontribusi lingkungan nasabah.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
