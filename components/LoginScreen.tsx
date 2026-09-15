@@ -111,14 +111,17 @@ export function LoginScreen({ nasabahList, onLoginSuccess }: LoginScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   // Load bank units dynamically from localStorage database
-  const [storedUnits, setStoredUnits] = useState<BankUnit[]>([]);
+  const [storedUnits, setStoredUnits] = useState<BankUnit[]>(() => {
+    return getStoredBankUnits();
+  });
 
   useEffect(() => {
-    const units = getStoredBankUnits();
-    setStoredUnits(units);
-    if (units.length > 0 && !units.some(u => u.id === selectedAdminUnitId)) {
-      setSelectedAdminUnitId(units[0].id);
-    }
+    const handleUnitStorage = () => {
+      const units = getStoredBankUnits();
+      setStoredUnits(units);
+    };
+    window.addEventListener('storage', handleUnitStorage);
+    return () => window.removeEventListener('storage', handleUnitStorage);
   }, []);
 
   // Quotes yang berubah setiap kali masuk / dibuka

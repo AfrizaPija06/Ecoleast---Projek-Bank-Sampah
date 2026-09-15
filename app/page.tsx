@@ -155,46 +155,8 @@ export default function BankSampahDashboardPage() {
   const [isRegisterNasabahModalOpen, setIsRegisterNasabahModalOpen] = useState(false);
   const [isChangeAdminPhotoOpen, setIsChangeAdminPhotoOpen] = useState(false);
   const [adminPhotoUrlInput, setAdminPhotoUrlInput] = useState('');
-  const [currentLogoUrl, setCurrentLogoUrl] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('app_custom_logo_url');
-      if (stored) return stored;
-    }
-    return APP_LOGO_URL;
-  });
-  const [logoInputUrl, setLogoInputUrl] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('app_custom_logo_url');
-      if (stored) return stored;
-    }
-    return APP_LOGO_URL;
-  });
   const [activeReceiptRecord, setActiveReceiptRecord] = useState<SetoranRecord | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const handleSaveAppLogo = () => {
-    const trimmed = logoInputUrl.trim();
-    if (trimmed) {
-      localStorage.setItem('app_custom_logo_url', trimmed);
-      setCurrentLogoUrl(trimmed);
-      window.dispatchEvent(new Event('app_logo_updated'));
-      showToast('Logo aplikasi berhasil diperbarui di seluruh sidebar & login screen!');
-    } else {
-      localStorage.removeItem('app_custom_logo_url');
-      setCurrentLogoUrl(APP_LOGO_URL);
-      setLogoInputUrl(APP_LOGO_URL);
-      window.dispatchEvent(new Event('app_logo_updated'));
-      showToast('Logo aplikasi dikembalikan ke default APP_LOGO_URL!');
-    }
-  };
-
-  const handleResetAppLogo = () => {
-    localStorage.removeItem('app_custom_logo_url');
-    setCurrentLogoUrl(APP_LOGO_URL);
-    setLogoInputUrl(APP_LOGO_URL);
-    window.dispatchEvent(new Event('app_logo_updated'));
-    showToast('Logo aplikasi dikembalikan ke default APP_LOGO_URL!');
-  };
 
   const handleSaveAdminPhoto = () => {
     if (!authSession) return;
@@ -455,24 +417,6 @@ export default function BankSampahDashboardPage() {
     showToast(`Penarikan saldo sebesar Rp ${amount.toLocaleString('id-ID')} berhasil diproses.`);
   };
 
-  // Reset demo data to defaults
-  const handleResetData = () => {
-    if (confirm('Kembalikan data ke contoh awal UCIDA LESTARI?')) {
-      setNasabahList(INITIAL_NASABAH_LIST);
-      setSetoranRecords(INITIAL_SETORAN_RECORDS);
-      setActiveNasabahId(INITIAL_NASABAH_LIST[0].id);
-      setSelectedCategoryFilter(null);
-      try {
-        localStorage.removeItem('bank_sampah_nasabah_v2');
-        localStorage.removeItem('bank_sampah_records_v2');
-        localStorage.removeItem('bank_sampah_active_id_v2');
-      } catch {
-        // ignore
-      }
-      showToast('Data berhasil dikembalikan ke kondisi awal.');
-    }
-  };
-
   // 1. Loading state during hydration
   if (!isMounted) {
     return (
@@ -689,52 +633,6 @@ export default function BankSampahDashboardPage() {
                 activeTab="edukasi"
                 hideHeader={true}
               />
-            )}
-
-            {/* TAB 7: PENGATURAN */}
-            {nasabahActiveTab === 'pengaturan' && (
-              <div className="bg-white rounded-3xl p-8 border border-gray-150 shadow-xs max-w-xl mx-auto space-y-6 animate-in fade-in duration-200">
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#005596] bg-sky-50 flex items-center justify-center font-bold text-xl text-[#005596] shadow-xs">
-                    {activeNasabah.avatarUrl ? (
-                      <img src={activeNasabah.avatarUrl} alt={activeNasabah.nama} className="w-full h-full object-cover" />
-                    ) : (
-                      activeNasabah.avatarInitials
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{activeNasabah.nama}</h3>
-                    <p className="text-xs text-gray-500">ID: {activeNasabah.id} • {activeNasabah.unitBankSampah}</p>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-gray-100 space-y-3.5 text-xs text-gray-600">
-                  <div className="flex justify-between py-2 border-b border-gray-50">
-                    <span className="text-gray-400">Nomor Telepon</span>
-                    <span className="font-semibold text-gray-800">{activeNasabah.noTelepon}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-gray-50">
-                    <span className="text-gray-400">Alamat Domisili</span>
-                    <span className="font-semibold text-gray-800">{activeNasabah.alamat}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-gray-50">
-                    <span className="text-gray-400">Tingkat Keaktifan</span>
-                    <span className="font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
-                      {activeNasabah.level}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex justify-between items-center">
-                  <span className="text-[11px] text-gray-400">Akun Nasabah Terdaftar</span>
-                  <button
-                    onClick={handleLogout}
-                    className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 font-semibold text-xs hover:bg-rose-100 transition-colors cursor-pointer"
-                  >
-                    Keluar dari Akun
-                  </button>
-                </div>
-              </div>
             )}
           </main>
         </div>
@@ -1242,171 +1140,6 @@ export default function BankSampahDashboardPage() {
             <AdminEducationManager />
           )}
 
-          {/* TAB 6: PENGATURAN (Settings & unit info) */}
-          {activeTab === 'pengaturan' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xs">
-                <h1 className="text-xl font-bold text-gray-900">Pengaturan Sistem & Unit</h1>
-                <p className="text-xs text-gray-500 mt-1">
-                  Informasi operasional Bank Sampah UCIDA LESTARI
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* App Logo Management (Sidebar & Login Screen) */}
-                <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-xs space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-[#005596]" />
-                        <span>Logo Aplikasi (Sidebar & Halaman Login)</span>
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Ganti tautan logo resmi aplikasi yang tampil di seluruh Sidebar (Admin & Warga) serta Halaman Login.
-                      </p>
-                    </div>
-                    <span className="text-[11px] font-semibold text-[#005596] bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100 self-start sm:self-auto">
-                      Sinkron Realtime
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 p-4 rounded-2xl bg-sky-50/50 border border-sky-100">
-                    <div className="w-28 h-28 rounded-2xl bg-white p-2 border border-sky-200 shadow-xs flex items-center justify-center shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={currentLogoUrl}
-                        alt="Logo Bank Sampah"
-                        className="w-full h-full object-contain"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = '/eco_least_logo.jpg';
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1 w-full space-y-2.5">
-                      <label className="block text-xs font-semibold text-gray-700">
-                        Placeholder Link / URL Logo:
-                      </label>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <input
-                          type="url"
-                          value={logoInputUrl}
-                          onChange={(e) => setLogoInputUrl(e.target.value)}
-                          placeholder="https://res.cloudinary.com/wyvqhb2n/image/upload/v1788945377/Aplikasi_Bank_Sampah_-_TIV_Citeureup_2026.png"
-                          className="flex-1 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#005596]/30 font-mono"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleSaveAppLogo}
-                            className="px-4 py-2.5 bg-[#005596] hover:bg-[#003B6D] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
-                          >
-                            Simpan Logo
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleResetAppLogo}
-                            className="px-3.5 py-2.5 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap"
-                          >
-                            Reset
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-gray-500">
-                        💡 <em>Tips:</em> Anda juga dapat mengganti tautan langsung di file <code className="bg-sky-100/60 text-sky-900 px-1.5 py-0.5 rounded font-mono text-[10px]">lib/appConfig.ts</code> pada variabel <code className="bg-sky-100/60 text-sky-900 px-1.5 py-0.5 rounded font-mono text-[10px]">APP_LOGO_URL</code>.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Profile Photo & Identity Management */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xs space-y-4">
-                  <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-[#005596]" />
-                    <span>Foto Profil Pengguna Aplikasi</span>
-                  </h3>
-
-                  <div className="flex items-center gap-4 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                    <div className="w-14 h-14 rounded-full bg-sky-50 text-[#005596] flex items-center justify-center overflow-hidden ring-2 ring-white shadow-xs shrink-0">
-                      {activeNasabah.avatarUrl ? (
-                        <img
-                          src={activeNasabah.avatarUrl}
-                          alt={activeNasabah.nama}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="w-8 h-8 text-[#005596] translate-y-0.5"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M12 2a5 5 0 100 10 5 5 0 000-10zM4 20a8 8 0 0116 0H4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-gray-900 truncate">
-                        {activeNasabah.nama}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {activeNasabah.avatarUrl ? 'Foto kustom aktif' : 'Siluet standar'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Unit Details */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xs space-y-4">
-                  <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-[#005596]" />
-                    <span>Informasi Unit Bank Sampah</span>
-                  </h3>
-
-                  <div className="space-y-3 text-xs text-gray-600">
-                    <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-400">Nama Unit</span>
-                      <span className="font-semibold text-gray-900">{activeNasabah.unitBankSampah}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-400">Wilayah / Posko</span>
-                      <span className="font-semibold text-gray-900">Citeureup, Kab. Bogor, Jawa Barat</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-400">Jadwal Penimbangan</span>
-                      <span className="font-semibold text-gray-900">Senin - Sabtu, 08:00 - 15:00 WIB</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-400">Kontak Pengurus</span>
-                      <span className="font-semibold text-gray-900">0812-8821-4920</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Demo Data Reset */}
-                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xs space-y-4">
-                  <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4 text-amber-600" />
-                    <span>Reset Data Peraga</span>
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    Kembalikan seluruh data transaksi dan saldo nasabah ke nilai default tampilan mockup (Siti Rahma - 125 kg & Rp750.000).
-                  </p>
-                  <button
-                    onClick={handleResetData}
-                    className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold rounded-xl border border-amber-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Reset ke Data Awal Mockup</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* TAB: PETA & SEBARAN BANK UNIT (Khusus Forum Desa Cicadas - Tingkat 1) */}
           {activeTab === 'peta_sebaran' && (
             <PetaSebaranView
@@ -1415,17 +1148,8 @@ export default function BankSampahDashboardPage() {
             />
           )}
 
-          {/* TAB: PERSETUJUAN BANK UNIT (Khusus Forum Desa Cicadas - Tingkat 1) */}
-          {activeTab === 'approval_unit' && (
-            <ForumApprovalView
-              initialFilter="pending"
-              onSimulateUnitLogin={handleSimulateUnitLogin}
-              onNavigateToTab={(tab) => setActiveTab(tab)}
-            />
-          )}
-
-          {/* TAB: DAFTAR BANK UNIT DESA (Khusus Forum Desa Cicadas - Tingkat 1) */}
-          {activeTab === 'daftar_unit' && (
+          {/* TAB: DAFTAR & MANAJEMEN BANK UNIT DESA (Khusus Forum Desa Cicadas - Tingkat 1) */}
+          {(activeTab === 'daftar_unit' || activeTab === 'approval_unit') && (
             <ForumApprovalView
               initialFilter="all"
               onSimulateUnitLogin={handleSimulateUnitLogin}

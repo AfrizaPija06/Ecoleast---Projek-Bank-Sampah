@@ -304,8 +304,7 @@ export function saveStoredForumDesa(forum: ForumDesa): void {
 }
 
 /**
- * Mendaftarkan Bank Sampah Unit baru (Status otomatis: pending_review)
- * Menunggu verifikasi dan persetujuan dari Forum Desa Cicadas
+ * Mendaftarkan Bank Sampah Unit baru (Langsung otomatis terdaftar & aktif)
  */
 export function registerNewBankUnit(data: {
   namaUnit: string;
@@ -315,7 +314,6 @@ export function registerNewBankUnit(data: {
   kontakHp: string;
   email?: string;
   alamatPos: string;
-  nomorSK?: string;
   bankNama?: string;
   bankRekening?: string;
   bankAtasNama?: string;
@@ -335,9 +333,10 @@ export function registerNewBankUnit(data: {
     kontakHp: data.kontakHp,
     email: data.email || `${data.namaUnit.toLowerCase().replace(/[^a-z0-9]/g, '')}@cicadas.desa.id`,
     alamatPos: data.alamatPos,
-    status: 'pending_review',
+    status: 'active',
     tanggalPendaftaran: new Date().toISOString().split('T')[0],
-    nomorSK: data.nomorSK || `SK.${data.rw.replace(/\s+/g, '')}/BS/${new Date().getFullYear()}`,
+    tanggalDisetujui: new Date().toISOString().split('T')[0],
+    disetujuiOleh: 'Otomatis Terdaftar di Sistem Desa',
     rekeningKas: {
       bank: data.bankNama || 'Bank BJB',
       nomorRekening: data.bankRekening || '-',
@@ -346,7 +345,7 @@ export function registerNewBankUnit(data: {
     },
     jumlahNasabah: 0,
     totalSampahKg: 0,
-    aktivitasTerakhir: 'Pendaftaran unit baru diajukan • Menunggu verifikasi SK',
+    aktivitasTerakhir: 'Unit baru terdaftar resmi & siap beroperasi',
     koordinatPeta: {
       x: Math.min(85, Math.max(15, 20 + ((nextNum * 23) % 65))),
       y: Math.min(85, Math.max(15, 25 + ((nextNum * 31) % 60))),

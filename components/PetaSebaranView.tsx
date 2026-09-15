@@ -116,17 +116,11 @@ export function PetaSebaranView({
   const getStatusBadge = (status: UnitStatus) => {
     switch (status) {
       case 'active':
+      default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Aktif Beroperasi
-          </span>
-        );
-      case 'pending_review':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            Menunggu Tinjauan SK
           </span>
         );
       case 'suspended':
@@ -134,12 +128,6 @@ export function PetaSebaranView({
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
             Ditangguhkan
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
-            {status}
           </span>
         );
     }
@@ -176,11 +164,11 @@ export function PetaSebaranView({
             </button>
             {onNavigateToTab && (
               <button
-                onClick={() => onNavigateToTab('approval_unit')}
+                onClick={() => onNavigateToTab('daftar_unit')}
                 className="px-3.5 py-2 rounded-xl bg-[#005596] hover:bg-[#003B6D] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Building2 className="w-3.5 h-3.5" />
-                <span>Kelola SK & Legalitas</span>
+                <span>Daftar & Manajemen Unit</span>
               </button>
             )}
           </div>
@@ -293,7 +281,6 @@ export function PetaSebaranView({
           >
             <option value="all">Semua Status ({units.length})</option>
             <option value="active">Aktif Beroperasi ({totalUnitAktif})</option>
-            <option value="pending">Menunggu SK ({units.length - totalUnitAktif})</option>
           </select>
 
           {/* Sort By */}
@@ -488,10 +475,6 @@ export function PetaSebaranView({
                 <div className="flex items-center gap-2 text-gray-600">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white shadow-2xs" />
                   <span>Bank Unit Aktif</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white shadow-2xs" />
-                  <span>Menunggu Verifikasi SK</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#005596] border border-white shadow-2xs" />

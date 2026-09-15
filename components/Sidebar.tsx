@@ -7,7 +7,6 @@ import {
   Package,
   Globe2,
   GraduationCap,
-  Settings,
   X,
   Shield,
   LogOut,
@@ -105,13 +104,6 @@ export function Sidebar({
           icon: MapPin,
           badge: 'Utama',
           badgeColor: 'bg-[#005596] text-white',
-        },
-        {
-          id: 'approval_unit',
-          label: 'Persetujuan Unit',
-          icon: FileCheck2,
-          badge: pendingUnitsCount > 0 ? pendingUnitsCount : undefined,
-          badgeColor: 'bg-amber-500 text-white animate-pulse',
         },
         { id: 'daftar_unit', label: 'Daftar Bank Unit', icon: Building2 },
         { id: 'dampak', label: 'Dampak Lingkungan', icon: Globe2 },
@@ -233,27 +225,10 @@ export function Sidebar({
           </nav>
         </div>
 
-        {/* Bottom Section: Settings & Decorative Pure Water Waves */}
+        {/* Bottom Section: Logout & Decorative Pure Water Waves */}
         <div className="relative overflow-hidden p-5 pt-0">
-          {/* Settings / Profile Link */}
-          <div className="relative z-10 border-t border-[#D0E5F5] pt-3 space-y-1">
-            <button
-              id="nav-link-pengaturan"
-              onClick={() => {
-                onSelectTab('pengaturan');
-                if (onCloseMobile) onCloseMobile();
-              }}
-              className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                activeTab === 'pengaturan'
-                  ? 'bg-[#005596] text-white shadow-sm font-semibold shadow-[#005596]/20'
-                  : 'text-[#1E4E79] hover:bg-white/80 hover:text-[#005596]'
-              }`}
-            >
-              <Settings className="w-4 h-4 text-[#3B7BBF]" />
-              <span>Pengaturan</span>
-            </button>
-
-            {onLogout && userRole !== 'nasabah' && (
+          {onLogout && (
+            <div className="relative z-10 border-t border-[#D0E5F5] pt-3">
               <button
                 id="sidebar-btn-logout"
                 onClick={onLogout}
@@ -262,8 +237,8 @@ export function Sidebar({
                 <LogOut className="w-4 h-4 text-rose-500" />
                 <span>Keluar</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Decorative Corner Water Wave (Bottom Left) */}
           <div className="pointer-events-none absolute -bottom-10 -left-10 w-44 h-44 opacity-40">
