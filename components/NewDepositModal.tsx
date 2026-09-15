@@ -216,6 +216,9 @@ export const NewDepositModal: React.FC<NewDepositModalProps> = ({
       return;
     }
 
+    const unitId = activeTargetNasabah.unitId || adminSession?.unitId || 'UNIT-CCD-001';
+    const unitNama = activeTargetNasabah.unitBankSampah || adminSession?.unitBankSampah || 'Bank Sampah Mekar Jaya RW 01';
+
     const uniqueId = `TRX-${tanggal.replace(/-/g, '').slice(2)}-${Date.now().toString().slice(-4)}`;
     const newRecord: SetoranRecord = {
       id: uniqueId,
@@ -230,6 +233,8 @@ export const NewDepositModal: React.FC<NewDepositModalProps> = ({
       totalNilai: calculatedTotalNilai,
       catatan: catatan.trim() || undefined,
       items: preparedItems,
+      unitId,
+      unitNama,
     };
 
     onSaveDeposit(newRecord, activeTargetNasabah.id);

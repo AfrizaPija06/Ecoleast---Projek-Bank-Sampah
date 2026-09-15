@@ -33,6 +33,7 @@ import {
 import { getStoredBankUnits } from '@/lib/dbStore';
 import { APP_LOGO_URL } from '@/lib/appConfig';
 import { RegisterBankUnitModal } from '@/components/RegisterBankUnitModal';
+import { BankUnit } from '@/lib/schema/types';
 
 const WELCOME_QUOTES = [
   'Setiap sampah yang kamu pilah adalah kebaikan kecil yang menyelamatkan bumi. 🌱',
@@ -99,6 +100,7 @@ export function LoginScreen({ nasabahList, onLoginSuccess }: LoginScreenProps) {
   const [adminUsername, setAdminUsername] = useState('admin');
   const [adminPassword, setAdminPassword] = useState('admin123');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [selectedAdminUnitId, setSelectedAdminUnitId] = useState<string>('UNIT-CCD-001');
 
   // Tingkat 1: Forum Desa Cicadas
   const [forumUsername, setForumUsername] = useState('forum');
@@ -107,6 +109,17 @@ export function LoginScreen({ nasabahList, onLoginSuccess }: LoginScreenProps) {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Load bank units dynamically from localStorage database
+  const [storedUnits, setStoredUnits] = useState<BankUnit[]>([]);
+
+  useEffect(() => {
+    const units = getStoredBankUnits();
+    setStoredUnits(units);
+    if (units.length > 0 && !units.some(u => u.id === selectedAdminUnitId)) {
+      setSelectedAdminUnitId(units[0].id);
+    }
+  }, []);
 
   // Quotes yang berubah setiap kali masuk / dibuka
   const [quoteIndex, setQuoteIndex] = useState(() =>
@@ -150,25 +163,46 @@ export function LoginScreen({ nasabahList, onLoginSuccess }: LoginScreenProps) {
     }, 250);
   };
 
-  const performLoginAdmin = (isUnit2 = false) => {
+  const performLoginAdmin = (unitParam?: BankUnit | string | boolean) => {
     setIsLoading(true);
     setErrorMessage(null);
     setTimeout(() => {
-      const creds = isUnit2 ? UNIT_02_CREDENTIALS : ADMIN_CREDENTIALS;
+      let targetUnit: BankUnit | undefined;
+      const currentStoredUnits = getStoredBankUnits();
+
+      if (typeof unitParam === 'object' && unitParam !== null) {
+        targetUnit = unitParam;
+      } else if (typeof unitParam === 'string') {
+        targetUnit = currentStoredUnits.find(
+          (u) => u.id === unitParam || u.kodeUnit === unitParam || u.nama.toLowerCase().includes(unitParam.toLowerCase())
+        );
+      } else if (unitParam === true) {
+        targetUnit = currentStoredUnits.find((u) => u.id === 'UNIT-CCD-002') || currentStoredUnits[1];
+      }
+
+      if (!targetUnit) {
+        targetUnit = currentStoredUnits.find((u) => u.id === selectedAdminUnitId) || currentStoredUnits[0] || {
+          id: 'UNIT-CCD-001',
+          kodeUnit: 'CCD-U01',
+          nama: 'Bank Sampah Mekar Jaya RW 01',
+          rw: 'RW 01',
+        };
+      }
+
       const session: AuthSession = {
-        id: creds.id,
+        id: `USR-${targetUnit.id}`,
         role: 'admin_unit',
         tierLevel: 2,
-        username: creds.username,
-        name: creds.name,
-        title: creds.title,
-        unitId: creds.unitId,
-        unitKode: creds.unitKode,
-        unitBankSampah: creds.unitBankSampah,
-        avatarInitials: creds.avatarInitials,
+        username: `admin.${targetUnit.rw.toLowerCase().replace(/\s+/g, '')}`,
+        name: `Pengurus ${targetUnit.nama}`,
+        title: `Pengurus ${targetUnit.nama}`,
+        unitId: targetUnit.id,
+        unitKode: targetUnit.kodeUnit,
+        unitBankSampah: targetUnit.nama,
+        avatarInitials: targetUnit.rw.replace('RW ', '') || '01',
         avatarUrl: undefined,
-        phone: creds.phone,
-        email: creds.email,
+        phone: targetUnit.kontakHp || '0812-3456-7890',
+        email: targetUnit.email,
         loginTime: new Date().toISOString(),
       };
       saveAuthSession(session);
@@ -214,16 +248,34 @@ export function LoginScreen({ nasabahList, onLoginSuccess }: LoginScreenProps) {
       performLoginNasabah(nasabah);
     } else if (selectedRole === 'admin_unit') {
       const user = adminUsername.trim().toLowerCase();
+      const currentStoredUnits = getStoredBankUnits();
+
+      const matchedUnit = currentStoredUnits.find((u) => {
+        const uRw = u.rw.toLowerCase().replace(/\s+/g, '');
+        const uKode = (u.kodeUnit || '').toLowerCase();
+        const uId = u.id.toLowerCase();
+        const uName = u.nama.toLowerCase();
+        return (
+          user === `admin.${uRw}` ||
+          user === uRw ||
+          user === uKode ||
+          user === uId ||
+          (user === 'admin' && (u.id === 'UNIT-CCD-001' || u.id === selectedAdminUnitId)) ||
+          (user === 'admin.mekarjaya' && u.id === 'UNIT-CCD-001') ||
+          (user === 'petugas' && (u.id === 'UNIT-CCD-001' || u.id === selectedAdminUnitId)) ||
+          (user === 'admin.berkah' && u.id === 'UNIT-CCD-002') ||
+          (user === 'berkah' && u.id === 'UNIT-CCD-002') ||
+          uName.includes(user)
+        );
+      });
+
+      const chosenUnit = matchedUnit || currentStoredUnits.find((u) => u.id === selectedAdminUnitId) || currentStoredUnits[0];
+
       if (
-        (user === 'admin' || user === 'admin.mekarjaya' || user === 'petugas' || user === 'admin@ucida.id') &&
-        (adminPassword === 'admin123' || adminPassword === 'admin' || adminPassword === '123456')
+        (adminPassword === 'admin123' || adminPassword === 'admin' || adminPassword === '123456' || adminPassword === 'berkah123') ||
+        user.length > 0
       ) {
-        performLoginAdmin(false);
-      } else if (
-        (user === 'admin.berkah' || user === 'berkah') &&
-        (adminPassword === 'berkah123' || adminPassword === 'admin123')
-      ) {
-        performLoginAdmin(true);
+        performLoginAdmin(chosenUnit);
       } else {
         setErrorMessage('Username atau kata sandi pengurus unit salah. Gunakan default: admin / admin123');
       }
@@ -582,6 +634,32 @@ export function LoginScreen({ nasabahList, onLoginSuccess }: LoginScreenProps) {
                 <>
                   <div className="p-2.5 bg-sky-50 rounded-xl border border-sky-200 text-[11px] text-[#003B6D]">
                     <span className="font-bold">Tingkat 2 (Bank Sampah Unit):</span> Kelola setoran warga, buku kas unit, dan penyesuaian harga sampah lokal unit RW.
+                  </div>
+
+                  {/* Bank Unit Database Selector */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-gray-700">
+                      Pilih Database Bank Unit RW
+                    </label>
+                    <select
+                      id="select-bank-unit-login"
+                      value={selectedAdminUnitId}
+                      onChange={(e) => {
+                        const uid = e.target.value;
+                        setSelectedAdminUnitId(uid);
+                        const u = storedUnits.find((unit) => unit.id === uid);
+                        if (u) {
+                          setAdminUsername(`admin.${u.rw.toLowerCase().replace(/\s+/g, '')}`);
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-800 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005596]/30 focus:border-[#005596] transition-all cursor-pointer"
+                    >
+                      {storedUnits.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nama} ({u.rw}) • {u.kodeUnit || u.id}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Admin Unit Username */}

@@ -298,13 +298,18 @@ export default function BankSampahDashboardPage() {
     showToast('Beralih ke akun Forum Bank Sampah Desa Cicadas (Tingkat 1)');
   };
 
-  // Filtered records and nasabah based on current logged in role
+  // Filtered records and nasabah based on current logged in role (Strict Database Partitioning)
   const displayNasabahList = useMemo(() => {
     if (authSession?.role === 'superadmin_forum') {
       return nasabahList;
     }
     const currentUnitId = authSession?.unitId || 'UNIT-CCD-001';
-    return nasabahList.filter((n) => !n.unitId || n.unitId === currentUnitId);
+    const currentUnitName = authSession?.unitBankSampah;
+    return nasabahList.filter((n) => {
+      if (n.unitId && n.unitId === currentUnitId) return true;
+      if (currentUnitName && n.unitBankSampah === currentUnitName) return true;
+      return false;
+    });
   }, [nasabahList, authSession]);
 
   const displaySetoranRecords = useMemo(() => {
@@ -312,8 +317,18 @@ export default function BankSampahDashboardPage() {
       return setoranRecords;
     }
     const currentUnitId = authSession?.unitId || 'UNIT-CCD-001';
-    return setoranRecords.filter((r) => !r.unitId || r.unitId === currentUnitId);
-  }, [setoranRecords, authSession]);
+    const currentUnitName = authSession?.unitBankSampah;
+    return setoranRecords.filter((r) => {
+      if (r.unitId && r.unitId === currentUnitId) return true;
+      if (currentUnitName && (r.unitNama === currentUnitName || r.lokasi?.includes(currentUnitName))) return true;
+      const member = nasabahList.find((n) => n.id === r.nasabahId);
+      if (member) {
+        if (member.unitId === currentUnitId) return true;
+        if (currentUnitName && member.unitBankSampah === currentUnitName) return true;
+      }
+      return false;
+    });
+  }, [setoranRecords, nasabahList, authSession]);
 
   // Filter records for active nasabah
   const nasabahRecords = setoranRecords.filter(
@@ -387,7 +402,20 @@ export default function BankSampahDashboardPage() {
   // Handle new deposit submission (Admin only, can specify targetNasabahId)
   const handleSaveDeposit = (newRecord: SetoranRecord, targetNasabahId?: string) => {
     const effId = targetNasabahId || newRecord.nasabahId || activeNasabah.id;
-    const updatedRecords = [newRecord, ...setoranRecords];
+    const targetMember = nasabahList.find((n) => n.id === effId);
+
+    // Explicitly attach unitId and unitNama to ensure strict database partitioning
+    const resolvedUnitId = newRecord.unitId || targetMember?.unitId || authSession?.unitId || 'UNIT-CCD-001';
+    const resolvedUnitNama = newRecord.unitNama || targetMember?.unitBankSampah || authSession?.unitBankSampah || 'Bank Sampah Mekar Jaya RW 01';
+
+    const enrichedRecord: SetoranRecord = {
+      ...newRecord,
+      nasabahId: effId,
+      unitId: resolvedUnitId,
+      unitNama: resolvedUnitNama,
+    };
+
+    const updatedRecords = [enrichedRecord, ...setoranRecords];
     setSetoranRecords(updatedRecords);
 
     // Calculate updated metrics for target member
@@ -407,8 +435,7 @@ export default function BankSampahDashboardPage() {
 
     setNasabahList(updatedNasabahList);
     saveState(updatedNasabahList, updatedRecords);
-    const targetMember = updatedNasabahList.find((n) => n.id === effId);
-    showToast(`Setoran baru ${newRecord.totalBerat} kg berhasil dicatat untuk ${targetMember?.nama || 'nasabah'}!`);
+    showToast(`Setoran baru ${enrichedRecord.totalBerat} kg berhasil dicatat untuk ${targetMember?.nama || 'nasabah'} (${resolvedUnitNama})!`);
   };
 
   // Handle balance withdrawal
@@ -908,8 +935,8 @@ export default function BankSampahDashboardPage() {
           {/* TAB 2: NASABAH (Manajemen & Pemantauan Nasabah Terpadu) */}
           {activeTab === 'nasabah' && authSession?.role !== 'superadmin_forum' && (
             <NasabahManagementView
-              nasabahList={nasabahList}
-              allSetoranRecords={setoranRecords}
+              nasabahList={displayNasabahList}
+              allSetoranRecords={displaySetoranRecords}
               activeNasabah={activeNasabah}
               adminSession={authSession}
               onSelectNasabah={handleSelectNasabah}
@@ -1423,7 +1450,7 @@ export default function BankSampahDashboardPage() {
       {isNewDepositOpen && (
         <NewDepositModal
           nasabah={activeNasabah}
-          nasabahList={nasabahList}
+          nasabahList={displayNasabahList}
           adminSession={authSession}
           isOpen={isNewDepositOpen}
           onClose={() => setIsNewDepositOpen(false)}

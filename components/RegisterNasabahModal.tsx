@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   UserPlus,
   X,
@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { Nasabah } from '@/lib/bankSampahData';
 import { AuthSession } from '@/lib/auth';
+import { getStoredBankUnits } from '@/lib/dbStore';
+import { BankUnit } from '@/lib/schema/types';
 
 interface RegisterNasabahModalProps {
   isOpen: boolean;
@@ -40,21 +42,53 @@ export function RegisterNasabahModal({
   adminSession,
   existingNasabahList,
 }: RegisterNasabahModalProps) {
-  const currentUnitName =
-    adminSession?.unitBankSampah || 'Bank Sampah Mekar Jaya RW 01';
-  const currentUnitId = adminSession?.unitId || 'UNIT-CCD-001';
+  const [bankUnits, setBankUnits] = useState<BankUnit[]>([]);
+
+  useEffect(() => {
+    setBankUnits(getStoredBankUnits());
+  }, [isOpen]);
+
+  const isForumAdmin = adminSession?.role === 'superadmin_forum';
+
+  // Selected Bank Unit state
+  const defaultUnitId = adminSession?.unitId || (bankUnits[0]?.id || 'UNIT-CCD-001');
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(defaultUnitId);
+
+  useEffect(() => {
+    if (adminSession?.unitId) {
+      setSelectedUnitId(adminSession.unitId);
+    } else if (bankUnits.length > 0 && !selectedUnitId) {
+      setSelectedUnitId(bankUnits[0].id);
+    }
+  }, [adminSession, bankUnits]);
+
+  const activeUnit = bankUnits.find((u) => u.id === selectedUnitId) || bankUnits[0] || {
+    id: 'UNIT-CCD-001',
+    nama: 'Bank Sampah Mekar Jaya RW 01',
+    rw: 'RW 01',
+  };
+
+  const currentUnitName = activeUnit.nama;
+  const currentUnitId = activeUnit.id;
 
   const [idNasabah, setIdNasabah] = useState<string>(() => generateNewNasabahId());
   const [nama, setNama] = useState('');
   const [nik, setNik] = useState('');
   const [noTelepon, setNoTelepon] = useState('');
-  const [rt, setRt] = useState('RT 03');
-  const [rw, setRw] = useState('RW 01');
+  const [rt, setRt] = useState('RT 01');
+  const [rw, setRw] = useState(activeUnit.rw || 'RW 01');
   const [alamat, setAlamat] = useState('');
   const [targetBulananKg, setTargetBulananKg] = useState('20');
   const [pin, setPin] = useState('123456');
   const [errorMsg, setErrorMsg] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+
+  // Sync RW when activeUnit changes
+  useEffect(() => {
+    if (activeUnit?.rw) {
+      setRw(activeUnit.rw);
+    }
+  }, [selectedUnitId]);
 
   // Success state
   const [createdNasabah, setCreatedNasabah] = useState<Nasabah | null>(null);
@@ -219,17 +253,42 @@ export function RegisterNasabahModal({
               </div>
             )}
 
-            {/* Info Unit Pengampu Banner */}
-            <div className="p-3 bg-sky-50 rounded-xl border border-sky-200/80 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-[#003B6D]">
-                <Building2 className="w-4 h-4 text-[#005596] shrink-0" />
-                <div>
-                  <span className="font-bold">Unit Bank Sampah:</span> {currentUnitName}
+            {/* Info Unit Pengampu / Database Target */}
+            <div className="p-3.5 bg-sky-50 rounded-xl border border-sky-200/90 space-y-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-[#003B6D] font-bold">
+                  <Building2 className="w-4 h-4 text-[#005596] shrink-0" />
+                  <span>Database Bank Unit Penampung:</span>
                 </div>
+                <span className="px-2 py-0.5 rounded-md bg-white border border-sky-200 text-[#005596] font-mono font-bold text-[11px]">
+                  ID Nasabah: {idNasabah}
+                </span>
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-white border border-sky-200 text-[#005596] font-mono font-bold text-[11px]">
-                ID: {idNasabah}
-              </span>
+
+              {isForumAdmin ? (
+                <div>
+                  <select
+                    id="select-unit-nasabah-registration"
+                    value={selectedUnitId}
+                    onChange={(e) => setSelectedUnitId(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-sky-300 rounded-lg text-xs font-semibold text-[#003B6D] focus:outline-none focus:ring-2 focus:ring-[#005596]/30 cursor-pointer"
+                  >
+                    {bankUnits.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nama} ({u.rw}) • {u.kodeUnit || u.id}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-[#1E4E79] mt-1">
+                    *Sebagai Forum Desa, data nasabah ini akan dialokasikan langsung ke database Bank Unit yang dipilih di atas.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-[#003B6D] bg-white/70 px-3 py-1.5 rounded-lg border border-sky-100">
+                  <span className="font-semibold">{currentUnitName}</span>
+                  <span className="text-[11px] text-gray-500 font-mono">({currentUnitId})</span>
+                </div>
+              )}
             </div>
 
             {/* Field 1: Nama Lengkap */}
